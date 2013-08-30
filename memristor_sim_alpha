@@ -1,0 +1,114 @@
+#!/bin/bash
+echo ""
+read -p "Enter # of rows in the cross-point array (2-512): " row
+if [ "$row" == "" ]; then
+	echo "No input specified"
+	exit 0
+elif [[ "$row" == *[!0-9]* ]]; then
+	echo "Not a number"
+	exit 0
+elif [ "$row" -gt 512 ]; then
+	echo "Too many rows"
+	exit 0
+elif [ "$row" -lt 2 ]; then
+	echo "Too few rows"
+	exit 0
+fi
+read -p "Enter # of columns in the cross-point array (2-512): " column
+if [ "$column" == "" ]; then
+	echo "No input specified"
+	exit 0
+elif [[ "$column" == *[!0-9]* ]]; then
+	echo "Not a number"
+	exit 0
+elif [ "$column" -gt 512 ]; then
+	echo "Too many columns"
+	exit 0
+elif [ "$column" -lt 2 ]; then
+	echo "Too few columns"
+	exit 0
+fi
+read -p "Enter the y value of LRS resistance (leave default if you don't know what to specify) [0.1]: " y_lrs
+y_lrs=${y_lrs:-0.1}
+if [[ "$y_lrs" == *[!.0-9]* ]]; then
+	echo "Invalid value"
+	exit 0
+fi
+read -p "Enter the y value of HRS resistance (leave default if you don't know what to specify) [0.01]: " y_hrs
+y_hrs=${y_hrs:-0.01}
+if [[ "$y_hrs" == *[!.0-9]* ]]; then
+	echo "Invalid value"
+	exit 0
+fi
+read -p "Each cell has a selector? (y/n) [y] " w_sel
+w_sel=${w_sel:-y}
+if [ "$w_sel" == "y" ] || [ "$w_sel" == "Y" ]; then
+	read -p "Enter the write voltage (3V-4V) [3.5] " v_w
+	v_w=${v_w:-3.5}
+	read -p "Enter the read voltage (2V-3V) [2.6] " v_r
+	v_r=${v_r:-2.6}
+	file_name="w"
+	flag_sel=1
+elif [ "$w_sel" == "n" ] || [ "$w_sel" == "N" ]; then
+	read -p "Enter the write voltage (0.6V-1V) [0.8] " v_w
+	v_w=${v_w:-0.8}
+	read -p "Enter the read voltage (0.2V-0.5V) [0.4] " v_r
+	v_r=${v_r:-0.4}
+	file_name="wo"
+	flag_sel=0
+else
+	echo "Invalid choice"
+	exit 0
+fi
+
+if [ -e xpoint_${file_name}_sel_${row}x${column}_w.sp ]; then
+	echo "The xpoint_${file_name}_sel_${row}x${column}_w.sp file already exists"
+	read -p "Remove the old file? (y/n) " rm_sp
+	if [ "$rm_sp" == "y" ] || [ "$rm_sp" == "Y" ]; then
+		rm xpoint_${file_name}_sel_${row}x${column}_w.sp 
+	else
+		echo "Cannot proceed without deleting the existing file"
+		exit 0
+	fi
+fi
+if [ -e xpoint_${file_name}_sel_${row}x${column}_r.sp ]; then
+	echo "The xpoint_${file_name}_sel_${row}x${column}_r.sp file already exists"
+	read -p "Remove the old file? (y/n) " rm_sp
+	if [ "$rm_sp" == "y" ] || [ "$rm_sp" == "Y" ]; then
+		rm xpoint_${file_name}_sel_${row}x${column}_r.sp 
+	else
+		echo "Cannot proceed without deleting the existing file"
+		exit 0
+	fi
+fi
+echo "Generating HSPICE files for simulations..."
+echo ""
+	./gensp_w $row $column $y_lrs $y_hrs $v_w $flag_sel
+	./gensp_r $row $column $y_lrs $y_hrs $v_r $flag_sel
+
+if [ -e xpoint_${file_name}_sel_${row}x${column}_w.sp ]; then
+	echo "Running HSPICE simulation for write analysis..."
+	hspice xpoint_${file_name}_sel_${row}x${column}_w.sp > xpoint_${file_name}_sel_${row}x${column}_w.lis
+else
+	echo "Failed to generate xpoint_${file_name}_sel_${row}x${column}_w.sp file"
+fi
+if [ -e xpoint_${file_name}_sel_${row}x${column}_r.sp ]; then
+	echo  "Running HSPICE simulation for read analysis..."
+	hspice xpoint_${file_name}_sel_${row}x${column}_r.sp > xpoint_${file_name}_sel_${row}x${column}_r.lis
+else
+	echo "Failed to generate xpoint_${file_name}_sel_${row}x${column}_r.sp file"
+fi
+echo ""
+if [ -e xpoint_${file_name}_sel_${row}x${column}_w.lis ]; then
+	echo "Extracting results from xpoint_${file_name}_sel_${row}x${column}_w.lis..."
+	awk -f ext_w xpoint_${file_name}_sel_${row}x${column}_w.lis
+else
+	echo "Failed to generate xpoint_${file_name}_sel_${row}x${column}_w.lis file"
+fi
+echo ""
+if [ -e xpoint_${file_name}_sel_${row}x${column}_r.lis ]; then
+	echo "Extracting results from xpoint_${file_name}_sel_${row}x${column}_w.lis..."
+	awk -f ext_r xpoint_${file_name}_sel_${row}x${column}_r.lis
+else
+	echo "Failed to generate xpoint_${file_name}_sel_${row}x${column}_r.lis file"
+fi

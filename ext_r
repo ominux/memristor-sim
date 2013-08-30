@@ -1,0 +1,5 @@
+BEGIN{leak = 0}
+/123.00000k/    {
+	printf("Read current of a selected LRS (worst-case) = %sA\n", $3);
+	printf("Read current of a selected HRS (worst-case) = %sA\n", $4);}
+END{}

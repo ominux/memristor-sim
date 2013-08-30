@@ -1,0 +1,6 @@
+BEGIN{leak = 0}
+/123.00000k/    {
+	printf("Voltage drop on selected memristor (worst-case) = %sV\n", $2);
+	printf("Voltage drop on half-selected memristor (best-case) = %sV\n", $3);
+	printf("Total current on selected row = %sA\n", $4)}
+END{}
