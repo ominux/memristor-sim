@@ -51,6 +51,12 @@ if [[ "$y_hrs" == *[!.0-9]* ]]; then
 	echo "Invalid value"
 	exit 0
 fi
+read -p "Enter the ratio of Ron/Rwire_block [1e4]: " ratio
+ratio=${ratio:-1e4}
+if [[ "$y_hrs" == *[!.0-9]* ]]; then
+	echo "Invalid value"
+	exit 0
+fi
 read -p "Each cell has a selector? (y/n) [y] " w_sel
 w_sel=${w_sel:-y}
 if [ "$w_sel" == "y" ] || [ "$w_sel" == "Y" ]; then
@@ -119,7 +125,7 @@ fi
 echo ""
 if [ -e xpoint_${file_name}_sel_${row}x${column}_r.lis ]; then
 	echo "Extracting results from xpoint_${file_name}_sel_${row}x${column}_w.lis..."
-	awk -f ext_r xpoint_${file_name}_sel_${row}x${column}_r.lis
+	./ext_r.py xpoint_${file_name}_sel_${row}x${column}_r.lis
 else
 	echo "Failed to generate xpoint_${file_name}_sel_${row}x${column}_r.lis file"
 fi
