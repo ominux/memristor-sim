@@ -28,6 +28,17 @@ elif [ "$column" -lt 2 ]; then
 	echo "Too few columns"
 	exit 0
 fi
+read -p "Enter # of bits to access in a row (1-$row): [1] " bit
+bit=${bit:-1}
+if [[ "$bit" == *[!0-9]* ]]; then
+	echo "Not a number"
+	exit 0
+elif [ "$bit" -lt 4 ]; then
+	echo "Warning: CACTI requests a block size >= 2 Bytes"
+elif [ "$bit" -gt "$row" ]; then
+	echo "Too few bits to access in a row"
+	exit 0
+fi
 read -p "Enter the y value of LRS resistance (leave default if you don't know what to specify) [0.1]: " y_lrs
 y_lrs=${y_lrs:-0.1}
 if [[ "$y_lrs" == *[!.0-9]* ]]; then
@@ -101,7 +112,7 @@ fi
 echo ""
 if [ -e xpoint_${file_name}_sel_${row}x${column}_w.lis ]; then
 	echo "Extracting results from xpoint_${file_name}_sel_${row}x${column}_w.lis..."
-	awk -f ext_w xpoint_${file_name}_sel_${row}x${column}_w.lis
+	./ext_w.py xpoint_${file_name}_sel_${row}x${column}_w.lis
 else
 	echo "Failed to generate xpoint_${file_name}_sel_${row}x${column}_w.lis file"
 fi
