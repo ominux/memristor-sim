@@ -2,9 +2,10 @@
 
 import sys
 import getopt
+from pylab import *
 
-letters = "r:c:b:i:v:t:o:"
-keywords = ["row=", "column=", "bit=", "current=", "voltage=", "latency=", "outputfile="]
+letters = "r:c:b:i:o:"
+keywords = ["row=", "column=", "bit=", "inputfile=", "outputfile="]
 
 row = 128
 column = 128
@@ -14,37 +15,41 @@ t_w = "100"
 dr_v = "1.8"
 dr_i = "500.0"
 
-targetfilename = "memristor_mat.cfg"
+ifilename = ""
+ofilename = "memristor_mat.cfg"
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:],letters,keywords)
+	opts, args = getopt.getopt(sys.argv[1:],letters,keywords)
 except getopt.GetoptError:
-    sys.exit(2)
+	sys.exit(2)
 
 for opt, arg in opts:
-    if opt in ("-r", "--row"):
-        row = int(arg)
-    elif opt in ("-c", "--column"):
-        column = int(arg)
-    elif opt in ("-b", "--bit"):
-        bit = int(arg)
-    elif opt in ("-i", "--current"):
-        dr_i = arg
-    elif opt in ("-v", "--voltage"):
-        dr_v = arg
-    elif opt in ("-t", "--latency"):
-        t_w = arg
-    elif opt in ("-o", "--outputfile"):
-        targetfilename = arg
-    else:
-        assert False, "unhandled options"
-    
+	if opt in ("-r", "--row"):
+		row = int(arg)
+	elif opt in ("-c", "--column"):
+		column = int(arg)
+	elif opt in ("-b", "--bit"):
+		bit = int(arg)
+	elif opt in ("-i", "--inputfile"):
+		ifilename = arg
+	elif opt in ("-o", "--outputfile"):
+		ofilename = arg
+	else:
+		assert False, "unhandled options"
+
 print "row is ", row
 print "column is", column
 print "bit is", bit
-print "current is ", dr_i
-print "voltage is ", dr_v
-print "latency is ", t_w
+print "inputfile is "+ifilename
+print "outputfile is "+ofilename
+
+log  = open(ifilename,'r')
+
+for line in log:
+	if line.find('voltage') != -1:
+		dr_v = line.split()[1]
+	elif line.find('current') != -1:
+		dr_i = line.split()[1]
 
 samplefilename = "sample.cfg"
 samplefile = open(samplefilename,'r')
@@ -91,7 +96,7 @@ t_rc = 5.5
 t_rc_line = "-Xpoint RC latency (ns) " + str(t_rc) + "\n"
 data2write = data2write + t_rc_line
 
-targetfile = open(targetfilename,'w')
+targetfile = open(ofilename,'w')
 targetfile.write(data2write)
 targetfile.close()
 

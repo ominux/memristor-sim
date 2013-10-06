@@ -2,10 +2,12 @@
 
 import sys
 
-def parse(ifilename):
+def parse(ifilename,iScaleFactor):
 	log = open(ifilename,'r')
 	ofilename = ifilename.split('.')[0]+".res"
 	ofile = open(ofilename,'w')
+
+	scaling = float(iScaleFactor)
 
 	for line in log:
 		if line.find('123.00000k') != -1:
@@ -17,10 +19,9 @@ def parse(ifilename):
 			print "Total current on selected row ", data[3]
 			d1 = returnValue(data[1])
 			d2 = returnValue(data[3])
-			ofile.write(str(d1))
-			ofile.write("\n")
-			ofile.write(str(d2))
-			ofile.write("\n")
+			d2 = 1e6 * d2 / scaling
+			ofile.write("voltage(V) %f \n" % d1)
+			ofile.write("current(uA) %f \n" % d2)
 			#print "test d1 %f" % d1
 			#print "test d2 %f" % d2
 	
@@ -43,7 +44,7 @@ def returnValue(s):
 		sys.exit(2)
 
 if __name__ == "__main__":
-	if len(sys.argv) != 2:
-		print "Usage: extract.py <log file>\n"
+	if len(sys.argv) != 3:
+		print "Usage: extract.py <log file> <scaling factor of write current>\n"
 	else:
-		parse(sys.argv[1])
+		parse(sys.argv[1],sys.argv[2])
