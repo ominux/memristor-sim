@@ -1,0 +1,146 @@
+#!/bin/bash
+echo ""
+read -p "Enter # of rows in the cross-point array (2-512): " row
+if [ "$row" == "" ]; then
+	echo "No input specified"
+	exit 0
+elif [[ "$row" == *[!0-9]* ]]; then
+	echo "Not a number"
+	exit 0
+elif [ "$row" -gt 512 ]; then
+	echo "Too many rows"
+	exit 0
+elif [ "$row" -lt 2 ]; then
+	echo "Too few rows"
+	exit 0
+fi
+read -p "Enter # of columns in the cross-point array (2-512): " column
+if [ "$column" == "" ]; then
+	echo "No input specified"
+	exit 0
+elif [[ "$column" == *[!0-9]* ]]; then
+	echo "Not a number"
+	exit 0
+elif [ "$column" -gt 512 ]; then
+	echo "Too many columns"
+	exit 0
+elif [ "$column" -lt 2 ]; then
+	echo "Too few columns"
+	exit 0
+fi
+read -p "Enter # of bits to access in a row (1-$row): [1] " bit
+bit=${bit:-1}
+if [[ "$bit" == *[!0-9]* ]]; then
+	echo "Not a number"
+	exit 0
+elif [ "$bit" -lt 4 ]; then
+	echo "Warning: CACTI requests a block size >= 2 Bytes"
+elif [ "$bit" -gt "$row" ]; then
+	echo "Too few bits to access in a row"
+	exit 0
+fi
+read -p "Enter the y value of LRS resistance (leave default if you don't know what to specify) [0.4]: " y_lrs
+y_lrs=${y_lrs:-0.4}
+if [[ "$y_lrs" == *[!.0-9]* ]]; then
+	echo "Invalid value"
+	exit 0
+fi
+read -p "Enter the y value of HRS resistance (leave default if you don't know what to specify) [0.06]: " y_hrs
+y_hrs=${y_hrs:-0.06}
+if [[ "$y_hrs" == *[!.0-9]* ]]; then
+	echo "Invalid value"
+	exit 0
+fi
+ 
+read -p "Scaling Factor of cell current from micron to submicron [100]: " scaling
+scaling=${scaling:-100}
+
+read -p "Enter the ratio of LRS resistance to wire block resistance [1e4]: " ratio
+ratio=${ratio:-1e4}
+
+read -p "Each cell has a selector? (y/n) [y] " w_sel
+w_sel=${w_sel:-y}
+if [ "$w_sel" == "y" ] || [ "$w_sel" == "Y" ]; then
+	read -p "Enter the write voltage (3V-4V) [3.5] " v_w
+	v_w=${v_w:-3.5}
+	read -p "Enter the read voltage (2V-3V) [2.6] " v_r
+	v_r=${v_r:-2.6}
+	diode="w"
+	flag_sel=1
+elif [ "$w_sel" == "n" ] || [ "$w_sel" == "N" ]; then
+	read -p "Enter the write voltage (0.6V-1V) [0.8] " v_w
+	v_w=${v_w:-0.8}
+	read -p "Enter the read voltage (0.2V-0.5V) [0.4] " v_r
+	v_r=${v_r:-0.4}
+	diode="wo"
+	flag_sel=0
+else
+	echo "Invalid choice"
+	exit 0
+fi
+
+if [ -e xpoint_${diode}_sel_${row}x${column}_w.sp ]; then
+	echo "The xpoint_${diode}_sel_${row}x${column}_w.sp file already exists"
+	read -p "Remove the old file? (y/n) " rm_sp
+	if [ "$rm_sp" == "y" ] || [ "$rm_sp" == "Y" ]; then
+		rm xpoint_${diode}_sel_${row}x${column}_w.sp 
+	else
+		echo "Cannot proceed without deleting the existing file"
+		exit 0
+	fi
+fi
+if [ -e xpoint_${diode}_sel_${row}x${column}_r.sp ]; then
+	echo "The xpoint_${diode}_sel_${row}x${column}_r.sp file already exists"
+	read -p "Remove the old file? (y/n) " rm_sp
+	if [ "$rm_sp" == "y" ] || [ "$rm_sp" == "Y" ]; then
+		rm xpoint_${diode}_sel_${row}x${column}_r.sp 
+	else
+		echo "Cannot proceed without deleting the existing file"
+		exit 0
+	fi
+fi
+echo "Generating HSPICE files for simulations..."
+echo ""
+	./gensp_w_beta $row $column $y_lrs $y_hrs $v_w $flag_sel $ratio $bit
+	./gensp_r_beta $row $column $y_lrs $y_hrs $v_r $flag_sel $ratio
+
+if [ -e xpoint_${diode}_sel_${row}x${column}_w.sp ]; then
+	echo "Running HSPICE simulation for write analysis..."
+	hspice xpoint_${diode}_sel_${row}x${column}_w.sp > xpoint_${diode}_sel_${row}x${column}_w.lis
+else
+	echo "Failed to generate xpoint_${diode}_sel_${row}x${column}_w.sp file"
+fi
+if [ -e xpoint_${diode}_sel_${row}x${column}_r.sp ]; then
+	echo  "Running HSPICE simulation for read analysis..."
+	hspice xpoint_${diode}_sel_${row}x${column}_r.sp > xpoint_${diode}_sel_${row}x${column}_r.lis
+else
+	echo "Failed to generate xpoint_${diode}_sel_${row}x${column}_r.sp file"
+fi
+echo ""
+if [ -e xpoint_${diode}_sel_${row}x${column}_w.lis ]; then
+	echo "Extracting results from xpoint_${diode}_sel_${row}x${column}_w.lis..."
+	python ext_w.py xpoint_${diode}_sel_${row}x${column}_w.lis ${y_lrs} ${y_hrs} ${scaling}
+else
+	echo "Failed to generate xpoint_${diode}_sel_${row}x${column}_w.lis file"
+fi
+echo ""
+if [ -e xpoint_${diode}_sel_${row}x${column}_r.lis ]; then
+	echo "Extracting results from xpoint_${diode}_sel_${row}x${column}_r.lis..."
+	python ext_r.py xpoint_${diode}_sel_${row}x${column}_r.lis ${scaling}
+else
+	echo "Failed to generate xpoint_${diode}_sel_${row}x${column}_r.lis file"
+fi
+echo ""
+if [ -e xpoint_${diode}_sel_${row}x${column}_w.res ]; then
+	echo "Generating a mat configuration file for CACTI..."
+	python gencfg.py -i xpoint_${diode}_sel_${row}x${column}_w.res -o mat_${diode}_${row}_${column}.cfg -r ${row} -c ${column} -b ${bit}
+else
+	echo "Failed to generate xpoint_${diode}_sel_${row}x${column}_w.res file"
+fi
+if [ -e mat_${diode}_${row}_${column}.cfg ]; then
+	echo "Configuration file for CACTI is generated"
+	echo "You can run ./cacti -infile mat_${diode}_${row}_${column}.cfg"
+	rm xpoint_${diode}_sel_${row}x${column}_*.st0 xpoint_${diode}_sel_${row}x${column}_w.res
+else
+	echo "Failed to generate mat_${diode}_${row}_${column}.cfg file"
+fi

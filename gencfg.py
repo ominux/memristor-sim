@@ -2,21 +2,20 @@
 
 import sys
 import getopt
-from pylab import *
-
-letters = "r:c:b:i:o:"
-keywords = ["row=", "column=", "bit=", "inputfile=", "outputfile="]
 
 row = 128
 column = 128
 bit = 8
 
-t_w = "100"
+t_w = "14.5"
 dr_v = "1.8"
 dr_i = "500.0"
 
 ifilename = ""
 ofilename = "memristor_mat.cfg"
+
+letters = "r:c:b:i:o:"
+keywords = ["row=", "column=", "bit=", "inputfile=", "outputfile="]
 
 try:
 	opts, args = getopt.getopt(sys.argv[1:],letters,keywords)
@@ -37,11 +36,11 @@ for opt, arg in opts:
 	else:
 		assert False, "unhandled options"
 
-print "row is ", row
-print "column is", column
-print "bit is", bit
-print "inputfile is "+ifilename
-print "outputfile is "+ofilename
+#print "row is ", row
+#print "column is", column
+#print "bit is", bit
+#print "inputfile is "+ifilename
+#print "outputfile is "+ofilename
 
 log  = open(ifilename,'r')
 
@@ -50,6 +49,8 @@ for line in log:
 		dr_v = line.split()[1]
 	elif line.find('current') != -1:
 		dr_i = line.split()[1]
+	elif line.find('latency') != -1:
+		t_w = line.split()[1]
 
 samplefilename = "sample.cfg"
 samplefile = open(samplefilename,'r')
@@ -57,17 +58,22 @@ samplefiledata = samplefile.read()
 samplefile.close()
 
 blk_size = bit / 2
-print "block size (bytes) is ", blk_size
+#print "block size (bytes) is ", blk_size
+if (blk_size < 1):
+	print "can't create a .cfg file"
+	sys.exit(2)
+elif (blk_size <2):
+	print "Warning: CACTI won't run with a block size < 2"
 blk_size_line = "-block size (bytes) " + str(blk_size) + "\n"
 data2write = blk_size_line + samplefiledata
 
 ram_size = row * column / 2
-print "size (bytes) is ", ram_size
+#print "size (bytes) is ", ram_size
 ram_size_line = "-size (bytes) " + str(ram_size) + "\n"
 data2write = ram_size_line + data2write
 
 nspd = ram_size / (2 * row * blk_size)
-print "Nspd is ", nspd
+#print "Nspd is ", nspd
 nspd_line = "-Nspd " + str(nspd) + "\n"
 data2write = data2write + nspd_line
 
