@@ -40,21 +40,20 @@ elif [ "$bit" -gt "$row" ]; then
 	exit 0
 fi
 read -p "Enter the y value of LRS resistance (leave default if you don't know what to specify) [0.4]: " y_lrs
-echo ""
 y_lrs=${y_lrs:-0.4}
 if [[ "$y_lrs" == *[!.0-9]* ]]; then
 	echo "Invalid value"
 	exit 0
 fi
-read -p "Enter the y value of HRS resistance (leave default if you don't know what to specify) [0.06]: " y_hrs
-y_hrs=${y_hrs:-0.06}
+read -p "Enter the y value of HRS resistance (leave default if you don't know what to specify) [0.02]: " y_hrs
+y_hrs=${y_hrs:-0.02}
 if [[ "$y_hrs" == *[!.0-9]* ]]; then
 	echo "Invalid value"
 	exit 0
 fi
  
-read -p "Scaling Factor of cell current from micron to submicron [150]: " scaling
-scaling=${scaling:-150}
+read -p "Scaling Factor of cell current from micron to submicron [165]: " scaling
+scaling=${scaling:-165}
 
 #read -p "Enter the ratio of LRS resistance to wire block resistance [1e4]: " ratio
 #ratio=${ratio:-1e4}

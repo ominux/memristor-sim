@@ -12,12 +12,18 @@ def parse(filename):
 			data = line.split()
 			#print "Read current of a selected LRS ", data[2] 
 			#print "Read current of a selected HRS ", data[3]
-			i_lrs_org = returnValue(data[2])
-			i_hrs_org = returnValue(data[3])
+			i_lrs_org = returnValue(data[1])
+			i_hrs_org = returnValue(data[2])
+			i_usel_lrs = returnValue(data[3])
+			v_usel_lrs = returnValue(data[4])
+			i_usel_lrs = -1e9 * i_usel_lrs
+			v_usel_lrs = 1e3 * v_usel_lrs
 			i_lrs = 1e6 * i_lrs_org
 			i_hrs = 1e6 * i_hrs_org
-			print "Read of a selected LRS %fuA " % i_lrs
-			print "Read of a selected HRS %fuA " % i_hrs
+			print "Miminum sensing current when select a LRS cell %fuA " % i_lrs
+			print "Maximum sensing current when select a HRS cell %fuA " % i_hrs
+			print "Maximum current of an unselected cell in the selected row %fnA " % i_usel_lrs
+			print "Maximum voltage drop on an unselected memristor in the selected row %fmV " % v_usel_lrs
 			if (i_lrs < i_hrs):
 				print "Read failure!"
 			elif (i_lrs - i_hrs < 0.1):
@@ -34,6 +40,10 @@ def returnValue(s):
 		return 1e-3 * float(num_s)
 	elif (unit_s == 'u'):
 		return 1e-6 * float(num_s)
+	elif (unit_s == 'n'):
+		return 1e-9 * float(num_s)
+	elif (unit_s == 'p'):
+		return 1e-12 * float(num_s)
 	elif (unit_s.isdigit()):
 		return float(s)
 	else:
@@ -41,7 +51,7 @@ def returnValue(s):
 		sys.exit(2)
 
 if __name__ == "__main__":
-	if len(sys.argv) != 3:
-		print "Usage: ext_r.py <log file> <scaling factor of cell current>\n"
+	if len(sys.argv) != 2:
+		print "Usage: ext_r.py <log file>\n"
 	else:
 		parse(sys.argv[1])

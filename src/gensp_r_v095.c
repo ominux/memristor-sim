@@ -32,6 +32,8 @@ int main(int argc, char *argv[]) {
 	float v_usel_r = 0.0;
 	float v_usel_c = -1.0;
 
+	float diode_scale = 1.2;
+
 	if (argc == 10) {
 	    r = atoi(argv[1]);
 	    c = atoi(argv[2]);
@@ -85,12 +87,16 @@ int main(int argc, char *argv[]) {
     float b2 = 4.7;
     float von = 0.8;
     float ion = 1e6 / i_scale * von * (gON * y_lrs + (1 - y_lrs) * b1 * exp (b2 * sqrt(von)));
+	float a = 1e-11;
+	float b = 0.7;
+	float vth = 0.15;
+	float ioff = 1e12 * diode_scale * a * sinh(von/2/b) * exp(von/2/vth);
     //float res_wire = ron / r_ron_rwire;
 
 	FILE *fp = fopen(filename,"w");
 
 	fprintf(fp,"*Array size %d*%d y_lrs:%.5f y_hrs:%.5f Read voltage: %.3f\n",r,c,y_lrs,y_hrs,v_r);
-	fprintf(fp,"*On current: %.2f uA\n",ion);
+	fprintf(fp,"*LRS cell current at 0.8V: %.2f uA, selector  current at 0.4V: %.6f nA\n",ion,ioff);
 	//fprintf(fp,"*Selected row:  %d Selected column: %d\n",sel_r,sel_c);
 
 	fprintf(fp,".subckt nl_tamem top bot\n");
@@ -98,11 +104,11 @@ int main(int argc, char *argv[]) {
 	fprintf(fp,"Gtamem top bot CUR='V(top,bot)/scaling*(gON*yInit+(1-yInit)*b1*exp(b2*sqrt(abs(V(top,bot)))))'\n");
 	fprintf(fp,".ends nl_tamem\n");
 	fprintf(fp,"\n");
-	
+
 	if (w_selector){
 		fprintf(fp,".subckt selector top bot\n");
-		fprintf(fp,".param a=1e-11, b=0.7, c=0.15, scaling=%.2f\n",i_scale);
-		fprintf(fp,"Gsel top bot CUR='a/scaling*sinh(V(top,bot)/b)*exp(abs(V(top,bot))/c)'\n");
+		fprintf(fp,".param a=1e-11, b=0.7, c=0.15, scaling=%.2f\n",diode_scale);
+		fprintf(fp,"Gsel top bot CUR='a*scaling*sinh(V(top,bot)/b)*exp(abs(V(top,bot))/c)'\n");
 		fprintf(fp,".ends selector\n");
 		fprintf(fp,"\n");
 	}
@@ -112,9 +118,9 @@ int main(int argc, char *argv[]) {
 	  for (j=1;j<=c;j++){
 		  if (w_selector){
 			  fprintf(fp,"Xs%dt%dh w%dt%dh m%dt%dh selector\n",i,j,i,j,i,j);
-			  fprintf(fp,"Xm%dt%dh m%dt%dh b%dt%dh nl_tamem yInit=%.6f\n",i,j,i,j,i,j,y_lrs);
+			  fprintf(fp,"Xm%dt%dh m%dt%dh b%dt%dh nl_tamem yInit=%.6f\n",i,j,i,j,i,j,y_hrs);
 		  }else{
-			  fprintf(fp,"Xm%dt%dh w%dt%dh b%dt%dh nl_tamem yInit=%.6f\n",i,j,i,j,i,j,y_lrs);
+			  fprintf(fp,"Xm%dt%dh w%dt%dh b%dt%dh nl_tamem yInit=%.6f\n",i,j,i,j,i,j,y_hrs);
 		  }
 	  }
 	fprintf(fp,"\n");
@@ -155,9 +161,9 @@ int main(int argc, char *argv[]) {
 	  for (j=1;j<=c;j++){
 		  if (w_selector){
 			  fprintf(fp,"Xs%dt%dl w%dt%dl m%dt%dl selector\n",i,j,i,j,i,j);
-			  fprintf(fp,"Xm%dt%dl m%dt%dl b%dt%dl nl_tamem yInit=%.6f\n",i,j,i,j,i,j,y_hrs);
+			  fprintf(fp,"Xm%dt%dl m%dt%dl b%dt%dl nl_tamem yInit=%.6f\n",i,j,i,j,i,j,y_lrs);
 		  }else{
-			  fprintf(fp,"Xm%dt%dl w%dt%dl b%dt%dl nl_tamem yInit=%.6f\n",i,j,i,j,i,j,y_hrs);
+			  fprintf(fp,"Xm%dt%dl w%dt%dl b%dt%dl nl_tamem yInit=%.6f\n",i,j,i,j,i,j,y_lrs);
 		  }
 	  }
 	fprintf(fp,"\n");
@@ -192,7 +198,7 @@ int main(int argc, char *argv[]) {
 
 	fprintf(fp,".param tab = 123000\n");
 	fprintf(fp,".DC tab 123000 123000 100\n");
-	fprintf(fp,".print vd_sel_h=par('V(Xm%dt%dh.top)-V(Xm%dt%dh.bot)') i_selr_l=par('-I(Vwsl)') i_selc_l=par('I(Vbsl)') i_selc_h=par('I(Vbsh)')\n",sel_r,sel_c,sel_r,sel_c);
+	fprintf(fp,".print i_selc_l=par('I(Vbsl)') i_selc_h=par('I(Vbsh)') i_usec_l=par('I(Rbr%dt1l)') vd_usel_l=par('V(Xm%dt1l.top)-V(Xm%dt1l.bot)') \n",sel_r-1,sel_r,sel_r);
 	fprintf(fp,"*.print vd_sel_l=par('V(Xm%dt%dl.top)-V(Xm%dt%dl.bot)') i_selr_h=par('-I(Vwsh)')\n",sel_r,sel_c,sel_r,sel_c);
 	fprintf(fp,"*.op\n");
 	fprintf(fp,".end\n");
