@@ -113,14 +113,21 @@ int main(int argc, char *argv[]) {
 		fprintf(fp,"\n");
 	}
 
+	int flip = (v_usel_r - v_sel_c > vth);
 	int i,j;
 	for (i=1;i<=r;i++)
 	  for (j=1;j<=c;j++){
 		  if (w_selector){
 			  fprintf(fp,"Xs%dt%dh w%dt%dh m%dt%dh selector\n",i,j,i,j,i,j);
-			  fprintf(fp,"Xm%dt%dh m%dt%dh b%dt%dh nl_tamem yInit=%.6f\n",i,j,i,j,i,j,y_hrs);
+			  if (flip && i!=sel_r)
+				fprintf(fp,"Xm%dt%dh m%dt%dh b%dt%dh nl_tamem yInit=%.6f\n",i,j,i,j,i,j,y_lrs);
+			  else
+				fprintf(fp,"Xm%dt%dh m%dt%dh b%dt%dh nl_tamem yInit=%.6f\n",i,j,i,j,i,j,y_hrs);
 		  }else{
-			  fprintf(fp,"Xm%dt%dh w%dt%dh b%dt%dh nl_tamem yInit=%.6f\n",i,j,i,j,i,j,y_hrs);
+			  if (flip && i!=sel_r)
+				fprintf(fp,"Xm%dt%dh w%dt%dh b%dt%dh nl_tamem yInit=%.6f\n",i,j,i,j,i,j,y_lrs);
+			  else
+				fprintf(fp,"Xm%dt%dh w%dt%dh b%dt%dh nl_tamem yInit=%.6f\n",i,j,i,j,i,j,y_hrs);
 		  }
 	  }
 	fprintf(fp,"\n");
@@ -161,9 +168,15 @@ int main(int argc, char *argv[]) {
 	  for (j=1;j<=c;j++){
 		  if (w_selector){
 			  fprintf(fp,"Xs%dt%dl w%dt%dl m%dt%dl selector\n",i,j,i,j,i,j);
-			  fprintf(fp,"Xm%dt%dl m%dt%dl b%dt%dl nl_tamem yInit=%.6f\n",i,j,i,j,i,j,y_lrs);
+			  if (flip && i!=sel_r)
+				fprintf(fp,"Xm%dt%dl m%dt%dl b%dt%dl nl_tamem yInit=%.6f\n",i,j,i,j,i,j,y_hrs);
+			  else
+				fprintf(fp,"Xm%dt%dl m%dt%dl b%dt%dl nl_tamem yInit=%.6f\n",i,j,i,j,i,j,y_lrs);
 		  }else{
-			  fprintf(fp,"Xm%dt%dl w%dt%dl b%dt%dl nl_tamem yInit=%.6f\n",i,j,i,j,i,j,y_lrs);
+			  if (flip && i!=sel_r)
+				fprintf(fp,"Xm%dt%dl w%dt%dl b%dt%dl nl_tamem yInit=%.6f\n",i,j,i,j,i,j,y_hrs);
+			  else
+				fprintf(fp,"Xm%dt%dl w%dt%dl b%dt%dl nl_tamem yInit=%.6f\n",i,j,i,j,i,j,y_lrs);
 		  }
 	  }
 	fprintf(fp,"\n");
