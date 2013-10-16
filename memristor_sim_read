@@ -1,0 +1,115 @@
+#!/bin/bash
+echo ""
+read -p "Enter # of rows in the cross-point array (2-512): " row
+if [ "$row" == "" ]; then
+	echo "No input specified"
+	exit 0
+elif [[ "$row" == *[!0-9]* ]]; then
+	echo "Not a number"
+	exit 0
+elif [ "$row" -gt 512 ]; then
+	echo "Too many rows"
+	exit 0
+elif [ "$row" -lt 2 ]; then
+	echo "Too few rows"
+	exit 0
+fi
+read -p "Enter # of columns in the cross-point array (2-512): " column
+if [ "$column" == "" ]; then
+	echo "No input specified"
+	exit 0
+elif [[ "$column" == *[!0-9]* ]]; then
+	echo "Not a number"
+	exit 0
+elif [ "$column" -gt 512 ]; then
+	echo "Too many columns"
+	exit 0
+elif [ "$column" -lt 2 ]; then
+	echo "Too few columns"
+	exit 0
+fi
+read -p "Enter # of bits to access in a row (1-$row): [1] " bit
+bit=${bit:-1}
+if [[ "$bit" == *[!0-9]* ]]; then
+	echo "Not a number"
+	exit 0
+elif [ "$bit" -lt 4 ]; then
+	echo "Warning: CACTI requests a block size >= 2 Bytes"
+elif [ "$bit" -gt "$row" ]; then
+	echo "Too few bits to access in a row"
+	exit 0
+fi
+read -p "Enter the y value of LRS resistance (leave default if you don't know what to specify) [0.4]: " y_lrs
+echo ""
+y_lrs=${y_lrs:-0.4}
+if [[ "$y_lrs" == *[!.0-9]* ]]; then
+	echo "Invalid value"
+	exit 0
+fi
+read -p "Enter the y value of HRS resistance (leave default if you don't know what to specify) [0.06]: " y_hrs
+y_hrs=${y_hrs:-0.06}
+if [[ "$y_hrs" == *[!.0-9]* ]]; then
+	echo "Invalid value"
+	exit 0
+fi
+ 
+read -p "Scaling Factor of cell current from micron to submicron [150]: " scaling
+scaling=${scaling:-150}
+
+#read -p "Enter the ratio of LRS resistance to wire block resistance [1e4]: " ratio
+#ratio=${ratio:-1e4}
+
+read -p "Enter the wire resistance between adjacent cells (ohm) [5.0]: " rwire
+rwire=${ratio:-5.0}
+
+read -p "Each cell has a selector? (y/n) [y] " w_sel
+w_sel=${w_sel:-y}
+if [ "$w_sel" == "y" ] || [ "$w_sel" == "Y" ]; then
+	read -p "Enter the read voltage (2V-3V) [2.6] " v_r
+	v_r=${v_r:-2.6}
+	read -p "Enter the biasing voltage on unselected row (-1.0 means floating) [0.0] " v_usel_r
+	v_usel_r=${v_usel_r:-0.0}
+	read -p "Enter the biasing voltage on unselected column (-1.0 means floating) [-1.0] " v_usel_c
+	v_usel_c=${v_usel_c:-"-1.0"}
+	diode="w"
+	flag_sel=1
+elif [ "$w_sel" == "n" ] || [ "$w_sel" == "N" ]; then
+	read -p "Enter the read voltage (0.2V-0.5V) [0.4] " v_r
+	v_r=${v_r:-0.4}
+	read -p "Enter the biasing voltage on unselected row (-1.0 means floating) [0.0] " v_usel_r
+	v_usel_r=${v_usel_r:-0.0}
+	read -p "Enter the biasing voltage on unselected column (-1.0 means floating) [-1.0] " v_usel_c
+	v_usel_c=${v_usel_c:-"-1.0"}
+	diode="wo"
+	flag_sel=0
+else
+	echo "Invalid choice"
+	exit 0
+fi
+
+if [ -e xpoint_${diode}_sel_${row}x${column}_r.sp ]; then
+	echo "The xpoint_${diode}_sel_${row}x${column}_r.sp file already exists"
+	read -p "Remove the old file? (y/n) " rm_sp
+	if [ "$rm_sp" == "y" ] || [ "$rm_sp" == "Y" ]; then
+		rm xpoint_${diode}_sel_${row}x${column}_r.sp 
+	else
+		echo "Cannot proceed without deleting the existing file"
+		exit 0
+	fi
+fi
+echo "Generating HSPICE files for simulations..."
+	./gensp_r $row $column $y_lrs $y_hrs $scaling $v_r $flag_sel $rwire $bit $v_usel_r $v_usel_c
+
+if [ -e xpoint_${diode}_sel_${row}x${column}_r.sp ]; then
+	echo  "Running HSPICE simulation for read analysis..."
+	hspice xpoint_${diode}_sel_${row}x${column}_r.sp > xpoint_${diode}_sel_${row}x${column}_r.lis
+else
+	echo "Failed to generate xpoint_${diode}_sel_${row}x${column}_r.sp file"
+fi
+echo ""
+if [ -e xpoint_${diode}_sel_${row}x${column}_r.lis ]; then
+	echo "Extracting results from xpoint_${diode}_sel_${row}x${column}_r.lis..."
+	python ext_r.py xpoint_${diode}_sel_${row}x${column}_r.lis
+else
+	echo "Failed to generate xpoint_${diode}_sel_${row}x${column}_r.lis file"
+fi

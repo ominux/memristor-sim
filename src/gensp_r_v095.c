@@ -29,6 +29,9 @@ int main(int argc, char *argv[]) {
 	int r,c,w_selector,bits;
 	float y_lrs,y_hrs,i_scale,v_r,res_wire;
 	
+	float v_usel_r = 0.0;
+	float v_usel_c = -1.0;
+
 	if (argc == 10) {
 	    r = atoi(argv[1]);
 	    c = atoi(argv[2]);
@@ -39,10 +42,26 @@ int main(int argc, char *argv[]) {
 	    w_selector = atoi(argv[7]);
 		res_wire = atof(argv[8]);
 		bits = atoi(argv[9]);
-	} else {
+	} else if (argc == 12) {
+	    r = atoi(argv[1]);
+	    c = atoi(argv[2]);
+	    y_lrs = atof(argv[3]);
+	    y_hrs = atof(argv[4]);
+		i_scale = atof(argv[5]);
+	    v_r = atof(argv[6]);
+	    w_selector = atoi(argv[7]);
+		res_wire = atof(argv[8]);
+		bits = atoi(argv[9]);
+		v_usel_r = atof(argv[10]);
+		v_usel_c = atof(argv[11]);
+	} else { 
 		printf("Usage: gensp_r #row, #column, y_lrs, y_hrs, scaling factor of current, read voltage, selector, wire resistance, bits per row\n");
+		exit(-1);
 	}
- 
+
+	float v_sel_r = v_r;
+	float v_sel_c = 0.0;
+
 	/* Default: read the farthest cell */
 	int sel_r = r;
 	int sel_c = c;
@@ -117,23 +136,19 @@ int main(int argc, char *argv[]) {
 		if (j % step == offset)
 		  fprintf(fp,"Rbr0t%dh b0tsh b1t%dh %.6f\n",j,j,res_wire);
 		else
-		  fprintf(fp,"Rbr0t%dh b0thh b1t%dh %.6f\n",j,j,res_wire);
+		  fprintf(fp,"Rbr0t%dh b0tuh b1t%dh %.6f\n",j,j,res_wire);
 		for (i=1;i<=r-1;i++)
 		  fprintf(fp,"Rbr%dt%dh b%dt%dh b%dt%dh %.6f\n",i,j,i,j,i+1,j,res_wire);
 	}
 	fprintf(fp,"\n");
 
-	float v_sel_r = v_r;
-	float v_usel_r = 0.0;
-	float v_usel_c = -1.0;
-	float v_sel_c = 0.0;
 
 	fprintf(fp,"Vwsh wst0h GND %.3f\n",v_sel_r);
 	if (v_usel_r > -0.5) //unselected rows are not floating
 	  fprintf(fp,"Vwuh wut0h GND %.3f\n",v_usel_r);
 	fprintf(fp,"Vbsh b0tsh GND %.3f\n",v_sel_c);
 	if (v_usel_c > -0.5) //unselected columns are not floating
-	  fprintf(fp,"Vbh b0th GND %.3f\n",v_usel_c);
+	  fprintf(fp,"Vbuh b0tuh GND %.3f\n",v_usel_c);
 	fprintf(fp,"\n");
 
 	for (i=1;i<=r;i++)
@@ -161,7 +176,7 @@ int main(int argc, char *argv[]) {
 		if (j % step == offset)
 		  fprintf(fp,"Rbr0t%dl b0tsl b1t%dl %.6f\n",j,j,res_wire);
 		else
-		  fprintf(fp,"Rbr0t%dl b0thl b1t%dl %.6f\n",j,j,res_wire);
+		  fprintf(fp,"Rbr0t%dl b0tul b1t%dl %.6f\n",j,j,res_wire);
 		for (i=1;i<=r-1;i++)
 		  fprintf(fp,"Rbr%dt%dl b%dt%dl b%dt%dl %.6f\n",i,j,i,j,i+1,j,res_wire);
 	}
@@ -172,7 +187,7 @@ int main(int argc, char *argv[]) {
 	  fprintf(fp,"Vwul wut0l GND %.3f\n",v_usel_r);
 	fprintf(fp,"Vbsl b0tsl GND %.3f\n",v_sel_c);
 	if (v_usel_c > -0.5) //unselected columns are not floating
-	  fprintf(fp,"Vbl b0tl GND %.3f\n",v_usel_c);
+	  fprintf(fp,"Vbul b0tul GND %.3f\n",v_usel_c);
 	fprintf(fp,"\n");
 
 	fprintf(fp,".param tab = 123000\n");

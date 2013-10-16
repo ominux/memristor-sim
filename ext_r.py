@@ -2,10 +2,9 @@
 
 import sys
 
-def parse(filename,iScaleFactor):
+def parse(filename):
 	
 	log = open(filename,'r')
-	scaling = float(iScaleFactor)
 	
 	for line in log:
 		if line.find('123.00000k') != -1:
@@ -15,8 +14,8 @@ def parse(filename,iScaleFactor):
 			#print "Read current of a selected HRS ", data[3]
 			i_lrs_org = returnValue(data[2])
 			i_hrs_org = returnValue(data[3])
-			i_lrs = 1e6 * i_lrs_org / scaling
-			i_hrs = 1e6 * i_hrs_org / scaling
+			i_lrs = 1e6 * i_lrs_org
+			i_hrs = 1e6 * i_hrs_org
 			print "Read of a selected LRS %fuA " % i_lrs
 			print "Read of a selected HRS %fuA " % i_hrs
 			if (i_lrs < i_hrs):
@@ -45,4 +44,4 @@ if __name__ == "__main__":
 	if len(sys.argv) != 3:
 		print "Usage: ext_r.py <log file> <scaling factor of cell current>\n"
 	else:
-		parse(sys.argv[1],sys.argv[2])
+		parse(sys.argv[1])
